@@ -1,3 +1,4 @@
+import 'package:weatherapp/Forecastmodel.dart';
 import 'package:weatherapp/models.dart';
 import 'dart:convert';
 
@@ -9,7 +10,7 @@ class DataService {
 
     final queryParameters = {
       'q': city,
-      'appid': '98e8dfcf4ea2319b693eb4c58b2a6018',
+      'appid': 'e91a32657d0817385b653b2e50a9f998',
       'units': 'imperial'
     };
 
@@ -23,21 +24,24 @@ class DataService {
     return WeatherInfo.fromJson(json);
   }
 
-  Future<WeatherInfo> getWeatherForecast(String city) async {
+  // https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={lon}&exclude={part}&appid={API key}
+  Future<ForecastWeather?> getWeatherForecast(
+      {required String lat, required String lon}) async {
     final queryParameters = {
-      'q': city,
-      'cnt': 7,
+      'lat': lat,
+      'lon': lon,
+      'exclude': 'minutely',
       'appid': 'e91a32657d0817385b653b2e50a9f998',
       'units': 'imperial'
     };
 
-    final uri = Uri.https('api.openweathermap.org',
-        '/data/2.5/2.5/forecast/daily', queryParameters);
+    final uri = Uri.https(
+        'api.openweathermap.org', '/data/2.5/onecall', queryParameters);
 
     final response = await http.get(uri);
 
-    print(response.body);
+    print("Forecast data is:  ${response.body}");
     final json = jsonDecode(response.body);
-    return WeatherInfo.fromJson(json);
+    return ForecastWeather.fromJson(json);
   }
 }

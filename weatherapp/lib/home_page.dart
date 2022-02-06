@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:weatherapp/Forecastmodel.dart';
 import 'package:weatherapp/data_service.dart';
 import 'package:weatherapp/models.dart';
 
@@ -21,9 +22,25 @@ class _HomePageState extends State<HomePage> {
   final _cityTextController = TextEditingController();
   final _dataService = DataService();
   WeatherInfo? _response;
+  ForecastWeather? _result;
+  List<String> tempForecastList = [];
+  List<String> tempDescriptionList = [];
+  List<String> windGustList = [];
+  List<String> hoursToShow = [];
+
+  List<int> maxTemperatureForecast = List.filled(7, 0);
+
+  @override
+  void dispose() {
+    tempForecastList.clear();
+    tempDescriptionList.clear();
+    windGustList.clear();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    Size? screenSize = MediaQuery.of(context).size;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: SafeArea(
@@ -57,6 +74,45 @@ class _HomePageState extends State<HomePage> {
                                 final response = await _dataService
                                     .getWeather(_cityTextController.text);
                                 setState(() => _response = response);
+                                final result =
+                                    await _dataService.getWeatherForecast(
+                                        lat: '18.5196', lon: '73.8553');
+                                setState(() => _result = result);
+                                print("Forecast dataaaaaa is:  + ${_result} ");
+                                var timeNow = DateTime.now().hour;
+
+                                for (int days = 1; days < 12; days++) {
+                                  timeNow = timeNow % 24;
+                                  timeNow == 0
+                                      ? timeNow = 24
+                                      : timeNow = timeNow;
+                                  hoursToShow.add(timeNow.toString());
+                                  timeNow++;
+                                }
+
+                                if (_result != null) {
+                                  try {
+                                    for (var i in result!.hourly) {
+                                      print("i is+ ${i.temp}");
+                                      var temp =
+                                          (((i.temp - 32) / 1.800).round());
+
+                                      tempForecastList.add(temp.toString());
+                                      for (var j in i.weather) {
+                                        String desc;
+                                        desc = j.description
+                                            .toString()
+                                            .replaceAll("Description.", "");
+                                        desc = desc.replaceAll("_", " ");
+                                        tempDescriptionList.add(
+                                            j.description != null ? desc : "");
+                                      }
+                                    }
+                                    print("temp is : + ${tempForecastList}");
+                                  } catch (e) {
+                                    print(e);
+                                  }
+                                }
                               },
                               icon: const Icon(
                                 Icons.search,
@@ -228,8 +284,98 @@ class _HomePageState extends State<HomePage> {
                   ],
                 )),
           ),
-          Expanded(flex: 2, child: Container()),
+          SizedBox(
+            height: screenSize.height * 0.1,
+          ),
+          _result != null
+              ? Flexible(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16.0, horizontal: 10.0),
+                    child: Container(
+                      color: Colors.black87,
+                      height: screenSize.height * 0.2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding:
+                                EdgeInsets.only(left: 20.0, top: 8, bottom: 8),
+                            child: Text(
+                              "HOURLY FORECAST",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Container(
+                              child: Row(
+                                children: <Widget>[
+                                  for (var i = 0; i < 10; i++)
+                                    forecastElement(
+                                        context,
+                                        7,
+                                        tempForecastList[i],
+                                        tempDescriptionList[i],
+                                        i == 0 ? "Now" : hoursToShow[i]),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : Expanded(flex: 2, child: Container())
         ]),
+      ),
+    );
+  }
+
+  Widget forecastElement(
+      context, daysFromNow, windSpeed, tempDescription, hoursToShow) {
+    // List<String> hoursToShow = [];
+    var now = new DateTime.now();
+    var oneDayFromNow = now.add(new Duration(days: daysFromNow));
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 16.0),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.11,
+        decoration: BoxDecoration(
+          color: Colors.blueGrey,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: <Widget>[
+              // Text(
+              //   'High: ' + maxTemperature.toString() + ' °C',
+              //   style: const TextStyle(color: Colors.white, fontSize: 20.0),
+              // ),
+              Text(
+                hoursToShow.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 20.0),
+              ),
+              Text(
+                windSpeed.toString() + '\u2103',
+                style: const TextStyle(color: Colors.white, fontSize: 20.0),
+              ),
+
+              Flexible(
+                child: Text(
+                  tempDescription.toString(),
+                  style: const TextStyle(color: Colors.white, fontSize: 10.0),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
